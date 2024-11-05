@@ -15,6 +15,7 @@
  */
 package com.google.ar.core.codelabs.hellogeospatial
 
+import android.graphics.Color
 import android.opengl.Matrix
 import android.util.Log
 import android.widget.Button
@@ -41,6 +42,11 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.time.times
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+
+var AnchorsDatabaseList: MutableList<com.google.ar.core.codelabs.hellogeospatial.data.Anchor>? = mutableListOf()
 
 class HelloGeoRenderer(val activity: HelloGeoActivity) :
   SampleRender.Renderer, DefaultLifecycleObserver {
@@ -126,6 +132,8 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
   override fun onDrawFrame(render: SampleRender) {
     val session = session ?: return
 
+    val button = activity.view.root.findViewById<Button>(R.id.button)
+
     //<editor-fold desc="ARCore frame boilerplate" defaultstate="collapsed">
     // Texture names should only be set once on a GL thread unless they change. This is done during
     // onDrawFrame rather than onSurfaceCreated since the session is not guaranteed to have been
@@ -196,24 +204,140 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
       activity.view.updateStatusText(earth, earth.cameraGeospatialPose)
     }
 
-    // Draw the placed anchor, if it exists.
-    earthAnchor?.let {
-      if (earth != null) {
-        userAnchorDistance = haversineDistance(anchorLatitude!!, anchorLongitude!!,
-          earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
+    if(Anchors == null && AnchorsCoordinates == null ||
+      Anchors?.size == 0 && AnchorsCoordinates?.size == 0){
+      activity.initListAnchor()
+      Anchors = AnchorFromDBtoRealAnchor()
+      AnchorsCoordinates = GetAnchorsCoordinatesFromDB()
+    }
+
+    /*if(activity.view.mapView?.earthMarkers == null ||
+      activity.view.mapView?.earthMarkers!!.size == 0 && AnchorsCoordinates != null) {
+      for(anchor in AnchorsCoordinates!!){
+        activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+        activity.view.mapView?.earthMarkers?.last()?.apply {
+          position = LatLng(anchor.first, anchor.second)
+          isVisible = true
+        }
       }
-        if(userAnchorDistance!! <= 3)
-          render.renderCompassAtAnchor(it)
+    }*/
+
+    button.setOnClickListener {
+
+      if((activity.view.mapView?.earthMarkers == null ||
+                activity.view.mapView?.earthMarkers!!.size == 0) && AnchorsCoordinates != null) {
+        for (anchor in AnchorsCoordinates!!) {
+          activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+          activity.view.mapView?.earthMarkers?.last()?.apply {
+            position = LatLng(anchor.first, anchor.second)
+            isVisible = true
+          }
+        }
+      }
+
+      if (Anchors != null && Anchors!!.size >= 3) {
+        Anchors!!.removeAt(0)
+        AnchorsCoordinates?.removeAt(0)
+        activity.deleteFirstAnchor()
+        activity.view.mapView?.earthMarkers?.first()?.apply {
+          isVisible = false
+        }
+        activity.view.mapView?.earthMarkers?.removeAt(0)
+      }
+
+      //для рендеринга
+      if (earth != null) {
+        Anchors?.add(
+          earth.createAnchor(
+            earth.cameraGeospatialPose.latitude,
+            earth.cameraGeospatialPose.longitude,
+            earth.cameraGeospatialPose.altitude - 1.3, 0f, 0f, 0f, 1f
+          )
+        )
+      }
+
+      if (earth != null) {
+        AnchorsCoordinates?.add(
+          Pair(
+            earth.cameraGeospatialPose.latitude,
+            earth.cameraGeospatialPose.longitude
+          )
+        )
+      }
+
+      //для бд
+      val newAnchor = earth?.cameraGeospatialPose?.let { it1 ->
+        com.google.ar.core.codelabs.hellogeospatial.data.Anchor(
+          latitude = earth?.cameraGeospatialPose!!.latitude,
+          longitude = it1.longitude
+        )
+      }
+      if (newAnchor != null) {
+        activity.insertAnchor(newAnchor)
+      }
+
+      activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+
+      activity.view.mapView?.earthMarkers?.last()?.apply {
+        if (earth != null) {
+          position = LatLng(earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
+        }
+        isVisible = true
+      }
+    }
+
+    // Draw the placed anchor, if it exists.
+    Anchors?.let {
+      for(anchor in it){
+        if (earth != null) {
+          val ind = Anchors!!.indexOf(anchor)
+          userAnchorDistance = AnchorsCoordinates?.get(ind)?.let { it1 ->
+            haversineDistance(
+              it1.first, it1.second,
+              earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
+          }
+        }
+        if(userAnchorDistance!! <= 3){
+          render.renderCompassAtAnchor(anchor)
+        }
+      }
     }
 
     // Compose the virtual scene with the background.
     backgroundRenderer.drawVirtualScene(render, virtualSceneFramebuffer, Z_NEAR, Z_FAR)
   }
 
-  var earthAnchor: Anchor? = null
+  var Anchors: MutableList<Anchor>? = mutableListOf()
+  var AnchorsCoordinates: MutableList<Pair<Double, Double>>? = mutableListOf()
   var userAnchorDistance: Double? = null
-  var anchorLatitude: Double? = null
-  var anchorLongitude: Double? = null
+
+  fun AnchorFromDBtoRealAnchor(): MutableList<Anchor>? {
+    var listAnchors: MutableList<Anchor> = mutableListOf()
+    val earth = session?.earth
+    val altitude = (earth?.cameraGeospatialPose?.altitude ?: 0.0) - 1.3
+    if(AnchorsDatabaseList != null){
+      for(anchor in AnchorsDatabaseList!!){
+        if (earth != null) {
+          listAnchors.add(earth.createAnchor(anchor.latitude, anchor.longitude,
+            altitude, 0f, 0f, 0f, 1f))
+        }
+      }
+    }
+    return listAnchors
+  }
+
+  fun GetAnchorsCoordinatesFromDB(): MutableList<Pair<Double, Double>>? {
+    var listAnhorsCoordinates: MutableList<Pair<Double, Double>> = mutableListOf()
+    val earth = session?.earth
+    if(AnchorsDatabaseList != null){
+      for(anchor in AnchorsDatabaseList!!){
+        if (earth != null) {
+          listAnhorsCoordinates.add(Pair(anchor.latitude, anchor.longitude))
+        }
+      }
+    }
+    return listAnhorsCoordinates
+  }
 
   fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
     val R = 6371000 // радиус Земли в метрах
@@ -234,36 +358,58 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
     if (earth.trackingState != TrackingState.TRACKING) {
       return
     }
-    earthAnchor?.detach()
 
-    val button = activity.view.root.findViewById<Button>(R.id.button)
-    button.setOnClickListener{
-      earthAnchor =
-        earth.createAnchor(earth.cameraGeospatialPose.latitude,
-          earth.cameraGeospatialPose.longitude,
-          earth.cameraGeospatialPose.altitude, 0f, 0f, 0f, 1f)
+    //earthAnchor?.detach()
 
-      anchorLatitude = earth.cameraGeospatialPose.latitude
-      anchorLongitude = earth.cameraGeospatialPose.longitude
+    //val button = activity.view.root.findViewById<Button>(R.id.button)
 
-      activity.view.mapView?.earthMarker?.apply {
-        position = LatLng(earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
-        isVisible = true
+    if((activity.view.mapView?.earthMarkers == null ||
+      activity.view.mapView?.earthMarkers!!.size == 0) && AnchorsCoordinates != null) {
+      for (anchor in AnchorsCoordinates!!) {
+        activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+        activity.view.mapView?.earthMarkers?.last()?.apply {
+          position = LatLng(anchor.first, anchor.second)
+          isVisible = true
+        }
       }
+    }
+
+    if (Anchors != null && Anchors!!.size >= 3) {
+      Anchors!!.removeAt(0)
+      AnchorsCoordinates?.removeAt(0)
+      activity.deleteFirstAnchor()
+      activity.view.mapView?.earthMarkers?.first()?.apply {
+        isVisible = false
+      }
+      activity.view.mapView?.earthMarkers?.removeAt(0)
     }
     // Place the earth anchor at the same altitude as that of the camera to make it easier to view.
     val altitude = earth.cameraGeospatialPose.altitude - 1.3
-// The rotation quaternion of the anchor in the East-Up-South (EUS) coordinate system.
+    // The rotation quaternion of the anchor in the East-Up-South (EUS) coordinate system.
     val qx = 0f
     val qy = 0f
     val qz = 0f
     val qw = 1f
-    earthAnchor =
-      earth.createAnchor(latLng.latitude, latLng.longitude, altitude, qx, qy, qz, qw)
+    Anchors?.add(
+      earth.createAnchor(latLng.latitude, latLng.longitude, altitude, qx, qy, qz, qw))
 
-    anchorLatitude = latLng.latitude
-    anchorLongitude = latLng.longitude
-    activity.view.mapView?.earthMarker?.apply {
+    AnchorsCoordinates?.add(
+      Pair(
+        latLng.latitude,
+        latLng.longitude
+      )
+    )
+
+    //для бд
+    val newAnchor = com.google.ar.core.codelabs.hellogeospatial.data.Anchor(
+      latitude = latLng.latitude,
+      longitude = latLng.longitude
+    )
+    activity.insertAnchor(newAnchor)
+
+    activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+
+    activity.view.mapView?.earthMarkers?.last()?.apply {
       position = latLng
       isVisible = true
     }

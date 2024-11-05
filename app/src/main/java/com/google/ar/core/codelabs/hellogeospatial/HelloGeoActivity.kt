@@ -17,10 +17,17 @@ package com.google.ar.core.codelabs.hellogeospatial
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.room.Room
 import com.google.ar.core.Config
 import com.google.ar.core.Session
+import com.google.ar.core.codelabs.hellogeospatial.data.Anchor
+import com.google.ar.core.codelabs.hellogeospatial.data.AnchorDatabase
+import com.google.ar.core.codelabs.hellogeospatial.data.AnchorsRepository
+import com.google.ar.core.codelabs.hellogeospatial.data.OfflineAnchorsRepository
 import com.google.ar.core.codelabs.hellogeospatial.helpers.ARCoreSessionLifecycleHelper
 import com.google.ar.core.codelabs.hellogeospatial.helpers.GeoPermissionsHelper
 import com.google.ar.core.codelabs.hellogeospatial.helpers.HelloGeoView
@@ -31,6 +38,8 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException
 import com.google.ar.core.exceptions.UnavailableDeviceNotCompatibleException
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class HelloGeoActivity : AppCompatActivity() {
   companion object {
@@ -41,11 +50,25 @@ class HelloGeoActivity : AppCompatActivity() {
   lateinit var view: HelloGeoView
   lateinit var renderer: HelloGeoRenderer
 
+  // Database and repository
+  val anchorsRepository: AnchorsRepository by lazy {
+    OfflineAnchorsRepository(AnchorDatabase.getDatabase(applicationContext).anchorDao())
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
+    // Initialize the database and repository
+    /*anchorDatabase = Room.databaseBuilder(
+      applicationContext,
+      AnchorDatabase::class.java, "anchor_database"
+    ).build()
+
+    anchorsRepository = OfflineAnchorsRepository(anchorDatabase.anchorDao())*/
+
     // Setup ARCore session lifecycle helper and configuration.
     arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
+
     // If Session creation or Session.resume() fails, display a message and log detailed
     // information.
     arCoreSessionHelper.exceptionCallback =
@@ -79,6 +102,28 @@ class HelloGeoActivity : AppCompatActivity() {
 
     // Sets up an example renderer using our HelloGeoRenderer.
     SampleRender(view.surfaceView, renderer, assets)
+  }
+
+  fun initListAnchor(){
+    lifecycleScope.launch {
+      AnchorsDatabaseList = anchorsRepository.getAllAnchorsStream().first().toMutableList()
+      print(AnchorsDatabaseList!!.size)
+    }
+  }
+
+  fun insertAnchor(anchor: Anchor){
+    lifecycleScope.launch {
+      anchorsRepository.insertAnchor(anchor)
+    }
+  }
+
+  fun deleteFirstAnchor(){
+    lifecycleScope.launch {
+      for(anchor in anchorsRepository.getAllAnchorsStream().first()){
+        anchorsRepository.deleteAnchor(anchor)
+        break
+      }
+    }
   }
 
   // Configure the session, setting the desired options according to your usecase.
