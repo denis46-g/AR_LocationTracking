@@ -43,11 +43,15 @@ import kotlin.math.sqrt
 import kotlin.time.times
 
 import androidx.lifecycle.lifecycleScope
+import com.google.ar.core.Earth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlin.math.abs
+import kotlin.math.min
 
 var AnchorsDatabaseList: MutableList<com.google.ar.core.codelabs.hellogeospatial.data.Anchor>? = mutableListOf()
 var doAction = 0
+val eps = 0.001
 
 class HelloGeoRenderer(val activity: HelloGeoActivity) :
   SampleRender.Renderer, DefaultLifecycleObserver {
@@ -293,6 +297,8 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
       }
     }
 
+    val minDistance = GetMinDistance(earth)
+
     // Draw the placed anchor, if it exists.
     Anchors?.let {
       for(anchor in it){
@@ -304,10 +310,12 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
               earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
           }
         }
-        /*if(userAnchorDistance!! <= 5){
-          render.renderCompassAtAnchor(anchor)
-        }*/
-        render.renderCompassAtAnchor(anchor, doAction)
+        //if(userAnchorDistance!! <= 10){
+          if(abs(userAnchorDistance!! - minDistance) < eps)
+            render.renderCompassAtAnchor(anchor, doAction)
+          else
+            render.renderCompassAtAnchor(anchor)
+        //}
       }
     }
 
@@ -369,6 +377,26 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
     val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
     return R * c // расстояние в метрах
+  }
+
+  fun GetMinDistance(earth: Earth?): Double {
+    var res = Double.MAX_VALUE
+    Anchors?.let {
+      for (anchor in it) {
+        if (earth != null) {
+          val ind = Anchors!!.indexOf(anchor)
+          userAnchorDistance = AnchorsCoordinates?.get(ind)?.let { it1 ->
+            haversineDistance(
+              it1.first, it1.second,
+              earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude
+            )
+          }
+          if(userAnchorDistance!! < res)
+            res = userAnchorDistance as Double
+        }
+      }
+    }
+    return res
   }
 
   fun onMapClick(latLng: LatLng) {

@@ -102,7 +102,7 @@ class HelloGeoActivity : AppCompatActivity() {
       if(AnchorsListfounded){
         view.searchingAnchorsTextView.visibility = View.INVISIBLE
         view.button.visibility = View.VISIBLE
-        //view.buttonAction.visibility = View.VISIBLE
+        view.buttonAction.visibility = View.VISIBLE
       }
     }
   }
