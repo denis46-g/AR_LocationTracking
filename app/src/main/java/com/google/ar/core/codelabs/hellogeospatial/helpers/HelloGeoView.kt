@@ -17,6 +17,7 @@ package com.google.ar.core.codelabs.hellogeospatial.helpers
 
 import android.opengl.GLSurfaceView
 import android.view.View
+import android.widget.Button
 import android.widget.TextView
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -32,6 +33,12 @@ import com.google.ar.core.examples.java.common.helpers.SnackbarHelper
 class HelloGeoView(val activity: HelloGeoActivity) : DefaultLifecycleObserver {
   val root = View.inflate(activity, R.layout.activity_main, null)
   val surfaceView = root.findViewById<GLSurfaceView>(R.id.surfaceview)
+
+  val searchingAnchorsTextView: TextView = root.findViewById<TextView>(R.id.searchingAnchorsTextView)
+
+  val button: Button = root.findViewById<Button>(R.id.button)
+
+    val buttonAction: Button = root.findViewById<Button>(R.id.buttonAction)
 
   val session
     get() = activity.arCoreSessionHelper.session
@@ -77,4 +84,9 @@ class HelloGeoView(val activity: HelloGeoActivity) : DefaultLifecycleObserver {
   override fun onPause(owner: LifecycleOwner) {
     surfaceView.onPause()
   }
+
+    fun setStatusMessage(message: String) {
+        searchingAnchorsTextView.text = message
+        //searchingAnchorsTextView.visibility = View.VISIBLE
+    }
 }

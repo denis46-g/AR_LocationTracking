@@ -110,7 +110,8 @@ class MapView(val activity: HelloGeoActivity, val googleMap: GoogleMap) {
       .flat(true)
       .visible(false)
       .icon(BitmapDescriptorFactory.fromBitmap(createColoredMarkerBitmap(color)))*/
-    earthMarkers.add(createMarker(color))
+    val marker = createMarker(color)
+    earthMarkers.add(marker)
     //earthMarkers.add(googleMap.addMarker(markersOptions)!!)
   }
 

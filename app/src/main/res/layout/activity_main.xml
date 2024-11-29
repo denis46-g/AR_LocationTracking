@@ -19,6 +19,7 @@
     android:layout_height="match_parent"
     tools:context=".HelloGeoActivity">
 
+
   <android.opengl.GLSurfaceView
       android:id="@+id/surfaceview"
       android:layout_width="fill_parent"
@@ -32,6 +33,15 @@
       android:layout_alignParentBottom="true"
       android:layout_marginBottom="0dp"
       android:text="SelfAnchor" />
+
+  <Button
+      android:id="@+id/buttonAction"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_alignParentBottom="true"
+      android:layout_marginBottom="0dp"
+      android:layout_marginStart="260dp"
+      android:text="Action" />
 
   <com.google.ar.core.codelabs.hellogeospatial.helpers.MapTouchWrapper
       android:id="@+id/map_wrapper"
@@ -55,5 +65,20 @@
         android:id="@+id/statusText"
         />
   </com.google.ar.core.codelabs.hellogeospatial.helpers.MapTouchWrapper>
+
+  <TextView
+      android:id="@+id/searchingAnchorsTextView"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:layout_above="@+id/map_wrapper"
+      android:layout_alignParentEnd="true"
+      android:layout_marginEnd="0dp"
+      android:layout_marginBottom="-300dp"
+      android:background="#FBFAFA"
+      android:text=""
+      android:gravity="center"
+      android:textAlignment="center"
+      android:textColor="#0C0000"
+      android:textSize="24sp" />
 
 </RelativeLayout>

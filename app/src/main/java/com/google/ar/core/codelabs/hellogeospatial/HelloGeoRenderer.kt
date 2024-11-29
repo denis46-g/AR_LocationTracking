@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
 var AnchorsDatabaseList: MutableList<com.google.ar.core.codelabs.hellogeospatial.data.Anchor>? = mutableListOf()
+var doAction = 0
 
 class HelloGeoRenderer(val activity: HelloGeoActivity) :
   SampleRender.Renderer, DefaultLifecycleObserver {
@@ -133,6 +134,7 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
     val session = session ?: return
 
     val button = activity.view.root.findViewById<Button>(R.id.button)
+    val buttonAction = activity.view.root.findViewById<Button>(R.id.buttonAction)
 
     //<editor-fold desc="ARCore frame boilerplate" defaultstate="collapsed">
     // Texture names should only be set once on a GL thread unless they change. This is done during
@@ -211,27 +213,32 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
       AnchorsCoordinates = GetAnchorsCoordinatesFromDB()
     }
 
-    /*if(activity.view.mapView?.earthMarkers == null ||
+    if(activity.view.mapView?.earthMarkers == null ||
       activity.view.mapView?.earthMarkers!!.size == 0 && AnchorsCoordinates != null) {
-      for(anchor in AnchorsCoordinates!!){
-        activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
-        activity.view.mapView?.earthMarkers?.last()?.apply {
-          position = LatLng(anchor.first, anchor.second)
-          isVisible = true
-        }
+      try{
+        InitMarkers()
       }
-    }*/
+      catch (e: Exception){
+        Log.d("MyMarkersException", "Error after attempt to draw markers")
+      }
+    }
+
+    buttonAction.setOnClickListener{
+      if(doAction == 0)
+        doAction = 1
+      else
+        doAction = 0
+    }
 
     button.setOnClickListener {
 
       if((activity.view.mapView?.earthMarkers == null ||
                 activity.view.mapView?.earthMarkers!!.size == 0) && AnchorsCoordinates != null) {
-        for (anchor in AnchorsCoordinates!!) {
-          activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
-          activity.view.mapView?.earthMarkers?.last()?.apply {
-            position = LatLng(anchor.first, anchor.second)
-            isVisible = true
-          }
+        try {
+          InitMarkers()
+        }
+        catch (e: Exception){
+          Log.d("MyMarkersException", "Error after attempt to draw markers")
         }
       }
 
@@ -297,9 +304,10 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
               earth.cameraGeospatialPose.latitude, earth.cameraGeospatialPose.longitude)
           }
         }
-        if(userAnchorDistance!! <= 3){
+        /*if(userAnchorDistance!! <= 5){
           render.renderCompassAtAnchor(anchor)
-        }
+        }*/
+        render.renderCompassAtAnchor(anchor, doAction)
       }
     }
 
@@ -310,6 +318,16 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
   var Anchors: MutableList<Anchor>? = mutableListOf()
   var AnchorsCoordinates: MutableList<Pair<Double, Double>>? = mutableListOf()
   var userAnchorDistance: Double? = null
+
+  fun InitMarkers(){
+    for(anchor in AnchorsCoordinates!!){
+      activity.view.mapView?.addMarker(Color.argb(255, 125, 125, 125))
+      activity.view.mapView?.earthMarkers?.last()?.apply {
+        position = LatLng(anchor.first, anchor.second)
+        isVisible = true
+      }
+    }
+  }
 
   fun AnchorFromDBtoRealAnchor(): MutableList<Anchor>? {
     var listAnchors: MutableList<Anchor> = mutableListOf()
@@ -415,7 +433,7 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
     }
   }
 
-  private fun SampleRender.renderCompassAtAnchor(anchor: Anchor) {
+  private fun SampleRender.renderCompassAtAnchor(anchor: Anchor, action: Int = 0) {
     // Get the current pose of the Anchor in world space. The Anchor pose is updated
     // during calls to session.update() as ARCore refines its estimate of the world.
     anchor.pose.toMatrix(modelMatrix, 0)
@@ -426,6 +444,10 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
 
     // Update shader properties and draw
     virtualObjectShader.setMat4("u_ModelViewProjection", modelViewProjectionMatrix)
+
+    // Передаем цвет в шейдер
+    virtualObjectShader.setInt("action", action)
+
     draw(virtualObjectMesh, virtualObjectShader, virtualSceneFramebuffer)
   }
 

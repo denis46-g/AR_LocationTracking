@@ -17,6 +17,7 @@ package com.google.ar.core.codelabs.hellogeospatial
 
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -58,14 +59,6 @@ class HelloGeoActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    // Initialize the database and repository
-    /*anchorDatabase = Room.databaseBuilder(
-      applicationContext,
-      AnchorDatabase::class.java, "anchor_database"
-    ).build()
-
-    anchorsRepository = OfflineAnchorsRepository(anchorDatabase.anchorDao())*/
-
     // Setup ARCore session lifecycle helper and configuration.
     arCoreSessionHelper = ARCoreSessionLifecycleHelper(this)
 
@@ -102,12 +95,39 @@ class HelloGeoActivity : AppCompatActivity() {
 
     // Sets up an example renderer using our HelloGeoRenderer.
     SampleRender(view.surfaceView, renderer, assets)
+    view.button.visibility = View.INVISIBLE
+    view.buttonAction.visibility = View.INVISIBLE
+
+    view.searchingAnchorsTextView.setOnClickListener{
+      if(AnchorsListfounded){
+        view.searchingAnchorsTextView.visibility = View.INVISIBLE
+        view.button.visibility = View.VISIBLE
+        //view.buttonAction.visibility = View.VISIBLE
+      }
+    }
   }
 
+  private var AnchorsListfounded = false
+
   fun initListAnchor(){
+    view.setStatusMessage("Поиск якорей...") // Отобразите сообщение о поиске
     lifecycleScope.launch {
       AnchorsDatabaseList = anchorsRepository.getAllAnchorsStream().first().toMutableList()
-      print(AnchorsDatabaseList!!.size)
+
+      kotlinx.coroutines.delay(3000)
+
+      val message = if (AnchorsDatabaseList!!.isNotEmpty()) {
+        "Якоря найдены в количестве ${AnchorsDatabaseList!!.size}"
+      } else {
+        "Якоря не найдены"
+      }
+      view.setStatusMessage(message)
+
+      kotlinx.coroutines.delay(2000)
+
+      view.setStatusMessage("Коснитесь экрана, чтобы продолжить")
+
+      AnchorsListfounded = true
     }
   }
 
