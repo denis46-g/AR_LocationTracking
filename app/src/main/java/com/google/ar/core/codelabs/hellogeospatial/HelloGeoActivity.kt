@@ -100,14 +100,16 @@ class HelloGeoActivity : AppCompatActivity() {
 
     view.searchingAnchorsTextView.setOnClickListener{
       if(AnchorsListfounded){
+        textViewIsTouched = true
         view.searchingAnchorsTextView.visibility = View.INVISIBLE
         view.button.visibility = View.VISIBLE
-        view.buttonAction.visibility = View.VISIBLE
+        //view.buttonAction.visibility = View.VISIBLE
       }
     }
   }
 
-  private var AnchorsListfounded = false
+  var AnchorsListfounded = false
+  var textViewIsTouched = false
 
   fun initListAnchor(){
     view.setStatusMessage("Поиск якорей...") // Отобразите сообщение о поиске

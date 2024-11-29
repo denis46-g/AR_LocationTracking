@@ -18,6 +18,7 @@ package com.google.ar.core.codelabs.hellogeospatial
 import android.graphics.Color
 import android.opengl.Matrix
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -47,6 +48,7 @@ import com.google.ar.core.Earth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
+import kotlin.math.acos
 import kotlin.math.min
 
 var AnchorsDatabaseList: MutableList<com.google.ar.core.codelabs.hellogeospatial.data.Anchor>? = mutableListOf()
@@ -311,8 +313,15 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
           }
         }
         //if(userAnchorDistance!! <= 10){
-          if(abs(userAnchorDistance!! - minDistance) < eps)
+          if(abs(userAnchorDistance!! - minDistance) < eps){
+            activity.runOnUiThread{
+              if(isAnchorVisible(anchor, earth) && activity.textViewIsTouched)
+                buttonAction.visibility = View.VISIBLE
+              else
+                buttonAction.visibility = View.INVISIBLE
+            }
             render.renderCompassAtAnchor(anchor, doAction)
+          }
           else
             render.renderCompassAtAnchor(anchor)
         //}
@@ -398,6 +407,88 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
     }
     return res
   }
+
+  private fun isAnchorVisible(anchor: Anchor, earth: Earth?): Boolean {
+    // Получаем позу якоря
+    val anchorPose = anchor.pose
+
+    // Получаем кватернион якоря
+    val anchorQuaternion = anchorPose.rotationQuaternion // [x, y, z, w]
+
+    // Извлекаем компоненты кватерниона
+    val (x, y, z, w) = anchorQuaternion
+
+    // Вычисляем матрицу вращения из кватерниона
+    val heading = atan2(2.0 * (y * w + x * z), (w * w + x * x - y * y - z * z).toDouble())
+
+    // Переводим радианы в градусы
+    val headingDegrees = Math.toDegrees(heading)
+
+    // Получаем позу камеры
+    val cameraPose = earth?.cameraGeospatialPose ?: return false
+
+    // Получаем направление heading камеры (угол в градусах)
+    val cameraHeading = cameraPose.heading // Угол ориентации камеры
+
+    return abs((headingDegrees + 360) % 360 - cameraHeading) <= 75
+    //return abs(headingDegrees - cameraHeading) < 80
+
+    /*// Положение камеры
+    val cameraPosition = FloatArray(3).apply {
+      this[0] = cameraPose.longitude.toFloat() // Долгота
+      this[1] = cameraPose.latitude.toFloat()   // Широта
+      this[2] = cameraPose.altitude.toFloat()    // Высота
+    }
+
+    // Рассчитываем вектор от камеры до якоря
+    val directionToAnchor = FloatArray(3).apply {
+      this[0] = anchorPosition[0] - cameraPosition[0]
+      this[1] = anchorPosition[1] - cameraPosition[1]
+      this[2] = anchorPosition[2] - cameraPosition[2]
+    }
+
+    // Нормализуем этот вектор
+    val normalizedDirectionToAnchor = normalize(directionToAnchor)
+
+    // Поскольку у нас нет ориентации камеры, предполагаем, что камера всегда направлена вниз. Это требует дальнейших уточнений в вашем коде.
+    val cameraForward = floatArrayOf(0f, 0f, -1f)
+
+    // Нормализуем направление камеры
+    val normalizedCameraForward = normalize(cameraForward)
+
+    // Вычисляем угол между векторами
+    val angle = cos(dotProduct(normalizedCameraForward, normalizedDirectionToAnchor))
+
+    // Определяем горизонтальное поле зрения
+    val horizontalFOV = Math.toRadians(60.0)  // горизонтальное поле зрения (пример)
+
+    // Проверяем, попадает ли угол в поле зрения
+    // Если угол меньше половины FOV, объект считается видимым
+    return angle <= (horizontalFOV / 2)*/
+
+
+  }
+
+  // Нормализация вектора
+  private fun normalize(vector: FloatArray): FloatArray {
+    val length = sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2])
+    return if (length > 0.0) {
+      FloatArray(3).apply {
+        this[0] = vector[0] / length
+        this[1] = vector[1] / length
+        this[2] = vector[2] / length
+      }
+    } else {
+      vector
+    }
+  }
+
+  // Скалярное произведение
+  private fun dotProduct(a: FloatArray, b: FloatArray): Double {
+    return (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toDouble()
+  }
+
+
 
   fun onMapClick(latLng: LatLng) {
     val earth = session?.earth ?: return
