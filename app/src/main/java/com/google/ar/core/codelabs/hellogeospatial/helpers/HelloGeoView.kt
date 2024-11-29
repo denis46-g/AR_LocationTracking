@@ -28,6 +28,7 @@ import com.google.ar.core.GeospatialPose
 import com.google.ar.core.codelabs.hellogeospatial.HelloGeoActivity
 import com.google.ar.core.codelabs.hellogeospatial.R
 import com.google.ar.core.examples.java.common.helpers.SnackbarHelper
+import org.w3c.dom.Text
 
 /** Contains UI elements for Hello Geo. */
 class HelloGeoView(val activity: HelloGeoActivity) : DefaultLifecycleObserver {
@@ -39,6 +40,7 @@ class HelloGeoView(val activity: HelloGeoActivity) : DefaultLifecycleObserver {
   val button: Button = root.findViewById<Button>(R.id.button)
 
     val buttonAction: Button = root.findViewById<Button>(R.id.buttonAction)
+    val helpTextView: TextView = root.findViewById<Button>(R.id.helpTextView)
 
   val session
     get() = activity.arCoreSessionHelper.session

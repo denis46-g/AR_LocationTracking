@@ -97,6 +97,7 @@ class HelloGeoActivity : AppCompatActivity() {
     SampleRender(view.surfaceView, renderer, assets)
     view.button.visibility = View.INVISIBLE
     view.buttonAction.visibility = View.INVISIBLE
+    view.helpTextView.visibility = View.INVISIBLE
 
     view.searchingAnchorsTextView.setOnClickListener{
       if(AnchorsListfounded){

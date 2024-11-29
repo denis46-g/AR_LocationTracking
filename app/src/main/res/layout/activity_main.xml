@@ -81,4 +81,18 @@
       android:textColor="#0C0000"
       android:textSize="24sp" />
 
+  <TextView
+      android:id="@+id/helpTextView"
+      android:layout_width="107dp"
+      android:layout_height="62dp"
+      android:layout_above="@+id/map_wrapper"
+      android:layout_alignParentEnd="true"
+      android:layout_marginEnd="0dp"
+      android:layout_marginBottom="-69dp"
+      android:background="#F60202"
+      android:gravity="center"
+      android:text="Якорь где-то рядом. Покрутитесь"
+      android:textAlignment="center"
+      android:textColor="#F8F5F5" />
+
 </RelativeLayout>

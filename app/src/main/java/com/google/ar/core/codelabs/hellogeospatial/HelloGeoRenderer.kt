@@ -20,6 +20,7 @@ import android.opengl.Matrix
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.TextView
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import com.google.android.gms.maps.model.LatLng
@@ -141,6 +142,7 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
 
     val button = activity.view.root.findViewById<Button>(R.id.button)
     val buttonAction = activity.view.root.findViewById<Button>(R.id.buttonAction)
+    val helpTextView = activity.view.root.findViewById<TextView>(R.id.helpTextView)
 
     //<editor-fold desc="ARCore frame boilerplate" defaultstate="collapsed">
     // Texture names should only be set once on a GL thread unless they change. This is done during
@@ -315,10 +317,14 @@ class HelloGeoRenderer(val activity: HelloGeoActivity) :
         //if(userAnchorDistance!! <= 10){
           if(abs(userAnchorDistance!! - minDistance) < eps){
             activity.runOnUiThread{
-              if(isAnchorVisible(anchor, earth) && activity.textViewIsTouched)
+              if(isAnchorVisible(anchor, earth) && activity.textViewIsTouched){
                 buttonAction.visibility = View.VISIBLE
-              else
+                helpTextView.visibility = View.INVISIBLE
+              }
+              else if(activity.textViewIsTouched){
                 buttonAction.visibility = View.INVISIBLE
+                helpTextView.visibility = View.VISIBLE
+              }
             }
             render.renderCompassAtAnchor(anchor, doAction)
           }
